@@ -41,7 +41,7 @@ def make_data(df_file_name: str, use_mystem=False,
     if not tokenize:
         contexts = [' '.join(s) for s in contexts]
 
-    return contexts, main_words, labels
+    return contexts, main_words, labels, list(df.word.unique)
 
 
 def visualize_pca(embedded_sents: List, labels: List):
