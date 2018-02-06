@@ -1,40 +1,6 @@
-# A Participant's Kit for RUSSE 2018 Word Sense Induction and Disambiguation Shared Task
+# RUSSE 2018 Word Sense Induction and Disambiguation Shared Task
 
-This repository contains instructions for participation in the [shared task on word sense induction and disambiguation for the Russian language](http://russe.nlpub.org/2018/wsi). **TLDR**: You are given a word, e.g. ```"замок"``` and a bunch of text fragments (aka "contexts") where this word occurrs, e.g. ```"замок владимира мономаха в любече"``` and  ```"передвижению засова ключом в замке"```. You need to cluster these contexts in the (unknown in advance) number of clusters which correspond to various senses of the word. In this example you want to have two groups with the contexts of the "lock" and the "castle" senses of the word ```"замок"```. 
-
-Quick start
--------------
-
-To be able to participate in the shared task you need to clone this repository and install dependencies of the evaluation script. Type this in the console:
-
-```
-git clone https://github.com/nlpub/russe-wsi-kit.git
-pip install -r requirements.txt
-```
-
-**System requirements**: you need to have Python and pip package manager installed on your system (Linux/Windows/Mac OSX). The scripts work for both Python 2.7+ and 3.4+. We recommend using Python 3.4+.
-
-
-Using the evaluation script
---------------------------
-
-To evaluate a sample baseline based on the Adagram sense embeddings model, provided by the organizers, run:
-```
-python3 evaluate.py data/main/wiki-wiki/train.baseline-adagram.csv
-```
-
-You should get the ARI scores per word and also the final value per dataset (the last value, here 0.392449):
-
-```
-word   ari       count
-бор    0.591175  56
-замок  0.495386  138
-лук    0.637076  110
-суда   0.005465  135
-       0.392449  439
-```
-
-The output of your system should have the same format as the sample baseline file provided in this repository ```data/main/wiki-wiki/train.baseline-adagram.csv```. When the test data will be available, you'll need to run your system against a test file in the similar format and submit to a CSV file with the result to the organizers.
+This repository contains models and notebooks created during participation in the [shared task on word sense induction and disambiguation for the Russian language](http://russe.nlpub.org/2018/wsi). **TLDR**: You are given a word, e.g. ```"замок"``` and a bunch of text fragments (aka "contexts") where this word occurrs, e.g. ```"замок владимира мономаха в любече"``` and  ```"передвижению засова ключом в замке"```. You need to cluster these contexts in the (unknown in advance) number of clusters which correspond to various senses of the word. In this example you want to have two groups with the contexts of the "lock" and the "castle" senses of the word ```"замок"```. 
 
 
 Description of the datasets
@@ -94,46 +60,7 @@ Structure of this repository
 ---------------------------
 
 - ```data``` -- directory with the train datasets and the corresponding baselines based on the Adagram
-- ```evaluate.py``` -- evaluation script used to compute the official performance metric (ARI).
-- ```baseline_trivial.py``` -- a script for generation of various trivial baselines, e.g. random labels.
-- ```baseline_adagram.py``` -- the script used to generate the Adagram baselines
-- ```requirements.txt``` -- the list of all dependencies of the ```evaluate.py``` and ```baseline_trivial.py``` scripts (note that the ```baseline_adagram.py``` has more dependencies specified inside this file)
-
-What should you do with the training data (how to start)?
--------------------
-
-Each training data contains a target word (the ```word``` column) and a context that represents the word (the ```context``` column). The ```gold_sense_id``` contains the corect sense identifier. For instance, take the first few examples from the **wiki-wiki** dataset:
-
-The following context of the target word "замок" has id "1":
-
-```
-замок владимира мономаха в любече . многочисленные укрепленные монастыри также не  являлись замками как таковыми — это были крепости...
-```
-
-and all the contexts of the word "замок" which refer to the same "building" sense also have the sense id "1". On the other hand, the other "lock" sense of this word is represented with the sense id "2", e.g.:
-
-```
-изобретатель поставил в тыльный конец ригеля круглую пластину , которая препятствовала передвижению засова ключом , пока пластина ( вращаемая часовым механизмом ) не становилась...
-```
-
-Your goal is to **design a system which takes as an input a pair of (word, context) and outputs the sense identifier**, e.g. "1" or "2". This is important to note that it does not matter which sense identifiers you use (numbers in the "gold_sense_id" and "predict_sense_id" columns)! It is not needed that they match sense identifiers of the gold standard! For instance, if in the "gold_sense_id" column you use identifiers {a,b,c} and in the "predict_sense_id" you use identifiers {1,2,3}, but the labelling of the data match so that each context labeled with "1" is always labeled with "a", each context labeled with "2" is always labeled with "b", etc. you will get the top score. Matching of the gold and predict sense inventories is not a requirement as we use [clustering based evaluation](https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html), namely we rely on the [Adjusted Rand Index](http://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html). Therefore, your cluster sense labels should not necessarily correspond to the labels from the gold standard.
-
-Thus, the successful submissions will group all contexts referring to the same word sense (by assigning the same ```predict_sense_id```). To achieve this goal, you can you models which induce sense inventory from a large corpus of all words in the corpus, e.g. Adagram or try to cluster directly the contexts of one word, e.g. using the k-Means algorithm. Besides, you can use an existing sense inventory from a dictionary, e.g. RuWordNet, to build your modes (which again do not match exactly the gold dataset, but this is not a problem).  
-Below we provide more details on differences between two tracks.
-
-During the training phase of the shared task, you are supposed to develop your models, testing them on the available datasets. You will be supposed to apply the developed models on the test data, once they will be made available.
-
-Knowledge-free and knowledge-rich tracks
-----------------------------------------
-
-During the test time, you are supposed to select between two tracks for each submission. The rule is simple: if you used any dictionaries to build your model, e.g. Wiktionary, offline dictionaries, RuThes, RuWordNet, YARN, and so on, you have to select the knowledge-rich track. Otherwise, you have to select the knowledge-free track. Thus, if you use not only text corpora, but instead you use some dictionaries your submissions must be in the knowledge-rich track. Otherwise, if the only resource your model is using is text corpora (or other resources which are not lexical dictionaries or databases containing explicit sense inventories) you can submit to the knowledge-free track. If you are not sure which track to use write to us.
-
-Restrictions
------------
-
-The only restriction which may disqualify a participant is that the use of the Gramota.ru or Bolshoi Tolkovii Slovar (Большой Толковый Словарь) is not allowed for developing the models for the dataset **bts-rnc**. For the other two datasets (**wiki-wiki** and **active-dict**) there are no restrictions: participants are free to use any resources.
-
-Questions
----------
-
-If you have any question, write an email to **rusemantics@googlegroups.com** or post it via [Google Groups](https://groups.google.com/forum/?fromgroups#!forum/rusemantics), which is the same thing (this is the primary way of obtaining updates about the shared task and contacting the organizers). Besides, you can follow the updates on our [Facebook group](https://www.facebook.com/rusemantics). Finally, discussions in Russian are also available at [NLPub Q&A forum](https://qa.nlpub.ru/c/russe).
+- ```notebooks``` -- directory with all experiments
+- ```nn_model``` -- python files of tensorflow model
+- ```organizers_baseline``` -- folder with organizers baseline scripts
+- ```trash``` -- several scripts which are not used now
