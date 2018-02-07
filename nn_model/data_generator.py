@@ -5,12 +5,13 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.corpus import stopwords
 from gensim.models import KeyedVectors
 from pymystem3 import Mystem
-from typing import Iterable, Sized, Union
+from typing import List
 
 
-def generate_triplet_batch(context_list: Union(Iterable[str], Sized),
-                           word_exclude="", w2v_model_path="../models/model_big_one.vec",
-                           lemmatize=False, use_tfidf=False, do_shuffle=False,
+def generate_triplet_batch(wv: KeyedVectors,
+                           context_list: List[str],
+                           word_exclude="", lemmatize=False,
+                           use_tfidf=False, do_shuffle=False,
                            sample_context=False, num_context_samples=10)-> (np.array, np.array):
     """
     Generate batch of positive and negative context words
@@ -19,7 +20,6 @@ def generate_triplet_batch(context_list: Union(Iterable[str], Sized),
     :param use_tfidf: to weight context words; fit just on all train
     :param lemmatize: use lemmatization of words in contexts or not
     :param word_exclude: to exclude `main_word` from train contexts
-    :param w2v_model_path: path to *.vec file with trained word embeddings
     :param do_shuffle: shuffle context_list or not
     :param sample_context: if False use all contexts, else sample num_context_samples
     :param num_context_samples: used only if sample_context=True
@@ -29,7 +29,6 @@ def generate_triplet_batch(context_list: Union(Iterable[str], Sized),
 
     """
 
-    wv = KeyedVectors.load_word2vec_format(w2v_model_path, binary=False)
     stop_words = stopwords.words('russian')
     voc_size = len(wv.vocab)
 

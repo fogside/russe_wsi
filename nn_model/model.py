@@ -1,10 +1,23 @@
-from tqdm import tqdm
 import tensorflow as tf
 import numpy as np
 
 
+class TFModel:
+    def __init__(self, emb_size: int, n_comp: int, logdir: str = None,
+                 saved_model_path: str = None, restore: bool = False) -> None:
+        assert (saved_model_path is not None) if restore else True,\
+            "saved_model_path must be specified only if restore is True!"
+        tf.reset_default_graph()
+
+
+
 class MultiComp:
-    def __init__(self, emb_size, n_comp):
+    def __init__(self, emb_size: int, n_comp: int, logdir: str = None,
+                 saved_model_path: str = None, restore: bool = False) -> None:
+
+        assert (saved_model_path is not None) if restore else True,\
+            "saved_model_path must be specified only if restore is True!"
+
         tf.reset_default_graph()
 
         self.pos = tf.placeholder(dtype=tf.float32, shape=[None, emb_size], name='pos_ph')
@@ -44,12 +57,20 @@ class MultiComp:
         neg_loss = tf.reduce_mean(tf.reduce_sum(norm_neg * norm_word_emb, axis=1))
 
         self.loss = -pos_loss + neg_loss  # + 1e-3*tf.nn.l2_loss(self.sense_comps)
-        #         opt = tf.train.AdamOptimizer(self.lr)
-        opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
-        self.train_op = opt.minimize(self.loss)
+        opt = tf.train.AdamOptimizer(self.lr)
+        # opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr)
+        self.train_op = opt.minimize(self.loss, name='train_op')
 
         self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
+
+        if logdir is not None:  # save graph files for tensorboard and start to record changes
+            self.writer = tf.summary.FileWriter(logdir, self.sess.graph)
+
+        self.saver = tf.train.Saver()
+        if restore:
+            self.saver.restore(self.sess, saved_model_path)
+        else:
+            self.sess.run(tf.global_variables_initializer())
 
     def train_on_sample(self, pos_samp, neg_samp, learning_rate):
         feed_dict = {self.pos: pos_samp, self.neg: neg_samp, self.lr: learning_rate}
@@ -62,3 +83,7 @@ class MultiComp:
     def get_linear_combination(self, samp):
         att, vecs = self.sess.run([self.att, self.sense_comps], {self.pos: samp})
         return np.sum(att * vecs, axis=0)
+
+    def save_model(self, model_path: str = None):
+        self.writer.close()  # close writer for tensorboard
+        self.saver.save(self.sess, save_path=model_path)

@@ -1,6 +1,7 @@
-from tqdm import tqdm_notebook
+from tqdm import tqdm
 from pymystem3 import Mystem
-from typing import Iterable, List, Dict
+from typing import List, Dict
+import numpy as np
 from matplotlib import pyplot as plt
 import os
 
@@ -55,7 +56,7 @@ def make_dataset(word: str, window: int, big_file_path="../data/my_data/big_one_
         # needs just for tqdm;
         N = get_length(big_file_path)
 
-        for j in tqdm_notebook(range(N)):
+        for j in tqdm(range(N)):
             line = bigf.readline().split()
             if w in line:
                 idxs = get_all_indexes(line, w)
@@ -67,22 +68,24 @@ def make_dataset(word: str, window: int, big_file_path="../data/my_data/big_one_
     return counter
 
 
-def plot_attentions(attens: dict, labels: Dict[List[int]] = None, save_to_path: str = '.img/'):
+def plot_attentions(attens: Dict[str, np.array], labels: Dict[str, List[int]],
+                    labels_true: Dict[str, List[int]], save_to_path: str = '.img/') -> None:
     if not os.path.exists(save_to_path):
         os.mkdir(save_to_path)
 
+    drown = []
     for w, att in attens.items():
-        if labels is None:
-            labels = {w: [1] * len(att)}
+        for i in range(3):
+            for j in range(3):
+                if (i != j) and (frozenset((i, j)) not in drown):
+                    drown.append(frozenset((i, j)))
 
-        plt.scatter(att[:, 0], att[:, 2], c=labels[w], marker='o')
-        plt.title("Components 0,2\nword={}".format(w))
-        plt.savefig(os.path.join(save_to_path + "cmp02.png"))
+                    f, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(12, 5))
+                    ax1.scatter(att[:, i], att[:, j], c=(labels[w] + 1) % 2, alpha=0.5, marker='o')
+                    ax1.set_title('Predicted')
+                    ax2.scatter(att[:, i], att[:, j], c=labels_true[w], alpha=0.5, marker='x')
+                    ax2.set_title('True')
+                    plt.title("Components {},{}\nword={}".format(i, j, w))
+                    plt.savefig(os.path.join(save_to_path + "cmp{}{}_{}.png".format(i, j, w)))
 
-        plt.scatter(att[:, 0], att[:, 1], c=labels[w], marker='o')
-        plt.title("Components 0,1\nword={}".format(w))
-        plt.savefig(os.path.join(save_to_path + "cmp01.png"))
-
-        plt.scatter(att[:, 1], att[:, 2], c=labels[w], marker='o')
-        plt.title("Components 1,2\nword={}".format(w))
-        plt.savefig(os.path.join(save_to_path + "cmp12.png"))
+    print("Pics have been saved to {}".format(save_to_path))
