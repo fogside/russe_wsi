@@ -41,9 +41,6 @@ def train_model(wv: KeyedVectors,
     """
     assert (save_path is not None) if save_model else True, 'save_path must be specified if save_model is True!'
 
-    if not os.path.exists(save_path):
-        os.mkdir(save_path)
-
     net = MultiComp(emb_size=emb_size, n_comp=n_comp, logdir=logdir, restore=restore, saved_model_path=save_path)
 
     n_samples = len(context_list)

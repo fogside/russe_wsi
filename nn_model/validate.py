@@ -13,6 +13,7 @@ if __name__ == "__main__":
 
     DATASET = "../data/main/wiki-wiki/train.csv"
     W2V_PATH = "../models/model_big_one.vec"
+    SAVED_MODELS_PATH = "./saved_models/"
     CLUSTERS_NUM = 2
     TRAIN_ON_BIG = False
     SAVE_MODELS = True
@@ -59,13 +60,16 @@ if __name__ == "__main__":
         else:
             lines = df[df.word == w].context.values
 
+        if SAVE_MODELS and (not os.path.exists(os.path.join(SAVED_MODELS_PATH, "{}".format(w)))):
+            os.mkdir(os.path.join(SAVED_MODELS_PATH, "{}".format(w)))
+
         net, att_, _ = train_model(wv=wv,
-                                   context_list=lines, n_comp=3, lr=1e-2, epoch_num=1,
+                                   context_list=lines, n_comp=3, lr=1e-2, epoch_num=5,
                                    lr_decay=False, do_shuffle=False, lemmatize=False,
                                    word_exclude="",
                                    use_tfidf=False, sample_context=False, num_context_samples=-1,
                                    logdir="./logdir", restore=False,
-                                   save_path="./saved_models/{}".format(w),
+                                   save_path=os.path.join(SAVED_MODELS_PATH, "{}/{}".format(w, w)),
                                    save_model=SAVE_MODELS)
         att_train[w] = att_
         nets[w] = net

@@ -4,7 +4,8 @@ from typing import List, Dict
 import numpy as np
 from matplotlib import pyplot as plt
 import os
-
+from time import gmtime, strftime
+from sklearn.metrics import adjusted_rand_score
 
 def get_all_indexes(lst: List[str], word: str) -> List[int]:
     """
@@ -73,19 +74,19 @@ def plot_attentions(attens: Dict[str, np.array], labels: Dict[str, List[int]],
     if not os.path.exists(save_to_path):
         os.mkdir(save_to_path)
 
-    drown = []
     for w, att in attens.items():
+        drown = []
         for i in range(3):
             for j in range(3):
                 if (i != j) and (frozenset((i, j)) not in drown):
                     drown.append(frozenset((i, j)))
 
+                    score = adjusted_rand_score(labels_true[w], labels[w])
                     f, (ax1, ax2) = plt.subplots(1, 2, sharey=True, figsize=(12, 5))
                     ax1.scatter(att[:, i], att[:, j], c=(labels[w] + 1) % 2, alpha=0.5, marker='o')
-                    ax1.set_title('Predicted')
-                    ax2.scatter(att[:, i], att[:, j], c=labels_true[w], alpha=0.5, marker='x')
+                    ax1.set_title('Predicted,\nscore: {}'.format(score))
+                    ax2.scatter(att[:, i], att[:, j], c=labels_true[w], alpha=0.5, marker='o')
                     ax2.set_title('True')
-                    plt.title("Components {},{}\nword={}".format(i, j, w))
-                    plt.savefig(os.path.join(save_to_path + "cmp{}{}_{}.png".format(i, j, w)))
+                    plt.savefig(os.path.join(save_to_path + "{}_{}{}_{}.png".format(w, i, j, strftime("%Y-%m-%d_[%H-%M-%S]", gmtime()))))
 
     print("Pics have been saved to {}".format(save_to_path))
