@@ -4,7 +4,6 @@ from tqdm import tqdm
 from gensim.models import KeyedVectors
 import numpy as np
 from typing import List
-import os
 
 
 def train_model(wv: KeyedVectors,
@@ -16,7 +15,8 @@ def train_model(wv: KeyedVectors,
                 num_context_samples=10,
                 logdir=None, restore=False,
                 save_model=False,
-                save_path="./saved_models"
+                save_path="./saved_models",
+                net=None
                 ) -> (MultiComp, np.array, np.array):
     """
     :param wv: pretrained word2vec vectors are neesary for data generator
@@ -41,7 +41,8 @@ def train_model(wv: KeyedVectors,
     """
     assert (save_path is not None) if save_model else True, 'save_path must be specified if save_model is True!'
 
-    net = MultiComp(emb_size=emb_size, n_comp=n_comp, logdir=logdir, restore=restore, saved_model_path=save_path)
+    if net is None:
+        net = MultiComp(emb_size=emb_size, n_comp=n_comp, logdir=logdir, restore=restore, saved_model_path=save_path)
 
     n_samples = len(context_list)
     train_atts = list()

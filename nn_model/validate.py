@@ -2,24 +2,30 @@ from utils import make_dataset, plot_attentions
 from train_method import train_model
 from data_generator import generate_triplet_batch
 from evaluation import evaluate_weighted_ari
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, AffinityPropagation
 from gensim.models import KeyedVectors
+from model import MultiCompMultiAttn
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import os
+np.random.seed(23)
 
 if __name__ == "__main__":
 
     DATASET = "../data/main/wiki-wiki/train.csv"
     W2V_PATH = "../models/model_big_one.vec"
     SAVED_MODELS_PATH = "./saved_models/"
-    CLUSTERS_NUM = 2
-    TRAIN_ON_BIG = False
+    EPOCH_NUM = 1
+    CLUSTER_MODEL = 'kmeans'
+    CLUSTERS_NUM = 3
+    TRAIN_ON_BIG = True
     SAVE_MODELS = True
     KM_FIT_ON_BIG = False
-    DRAW_PICS = True
+    DRAW_PICS = False
     EVAL = True
+
+    cluster_models_dict = {'kmeans': KMeans(n_clusters=CLUSTERS_NUM), 'affprop': AffinityPropagation()}
 
     df = pd.read_csv(DATASET, sep='\t')
     print("Loading embeddings....")
@@ -33,7 +39,7 @@ if __name__ == "__main__":
     labels_true = dict()
     nets = {}
 
-    km = KMeans(n_clusters=CLUSTERS_NUM, random_state=23)
+    clust_model = cluster_models_dict[CLUSTER_MODEL]
 
     wlist = []
     for w in df.word:
@@ -63,14 +69,16 @@ if __name__ == "__main__":
         if SAVE_MODELS and (not os.path.exists(os.path.join(SAVED_MODELS_PATH, "{}".format(w)))):
             os.mkdir(os.path.join(SAVED_MODELS_PATH, "{}".format(w)))
 
+        net = MultiCompMultiAttn(emb_size=100, n_comp=3, n_comp_mtx=4, logdir="./logdir")
         net, att_, _ = train_model(wv=wv,
-                                   context_list=lines, n_comp=3, lr=1e-2, epoch_num=5,
+                                   context_list=lines, n_comp=3, lr=1e-3, epoch_num=EPOCH_NUM,
                                    lr_decay=False, do_shuffle=False, lemmatize=False,
                                    word_exclude="",
                                    use_tfidf=False, sample_context=False, num_context_samples=-1,
                                    logdir="./logdir", restore=False,
                                    save_path=os.path.join(SAVED_MODELS_PATH, "{}/{}".format(w, w)),
-                                   save_model=SAVE_MODELS)
+                                   save_model=SAVE_MODELS,
+                                   net=net)
         att_train[w] = att_
         nets[w] = net
 
@@ -97,10 +105,11 @@ if __name__ == "__main__":
         att_for_word = np.array(att_for_word).squeeze()
 
         if KM_FIT_ON_BIG:
-            km.fit(np.array(att_).squeeze())
-            k_pred = km.predict(np.array(att_for_word))
+            clust_model.fit(np.array(att_).squeeze())
+            k_pred = clust_model.predict(np.array(att_for_word))
         else:
-            k_pred = km.fit_predict(np.array(att_for_word))
+            print(">>>>>>>>att_for_word: ", att_for_word.shape)
+            k_pred = clust_model.fit_predict(np.array(att_for_word))
 
         labels_dict[w] = k_pred
         labels_lst.extend(k_pred)
