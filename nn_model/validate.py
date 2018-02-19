@@ -5,10 +5,13 @@ from evaluation import evaluate_weighted_ari
 from sklearn.cluster import KMeans, AffinityPropagation
 from gensim.models import KeyedVectors
 from model import MultiCompMultiAttn
+from time import gmtime, strftime
 from tqdm import tqdm
+import pickle
 import numpy as np
 import pandas as pd
 import os
+
 np.random.seed(23)
 
 if __name__ == "__main__":
@@ -19,11 +22,13 @@ if __name__ == "__main__":
     EPOCH_NUM = 1
     CLUSTER_MODEL = 'kmeans'
     CLUSTERS_NUM = 3
-    TRAIN_ON_BIG = True
+    TRAIN_ON_BIG = False
     SAVE_MODELS = True
     KM_FIT_ON_BIG = False
     DRAW_PICS = False
     EVAL = True
+    SAVE_PREDICTIONS = True
+    score = None
 
     cluster_models_dict = {'kmeans': KMeans(n_clusters=CLUSTERS_NUM), 'affprop': AffinityPropagation()}
 
@@ -50,6 +55,9 @@ if __name__ == "__main__":
         for w in wlist:
             labels_true[w] = df[df.word == w].gold_sense_id.values
 
+    if not os.path.exists(SAVED_MODELS_PATH):
+        os.mkdir(SAVED_MODELS_PATH)
+
     print("Starting training models...")
     for w in wlist:
 
@@ -69,7 +77,7 @@ if __name__ == "__main__":
         if SAVE_MODELS and (not os.path.exists(os.path.join(SAVED_MODELS_PATH, "{}".format(w)))):
             os.mkdir(os.path.join(SAVED_MODELS_PATH, "{}".format(w)))
 
-        net = MultiCompMultiAttn(emb_size=100, n_comp=3, n_comp_mtx=4, logdir="./logdir")
+        # net = MultiCompMultiAttn(emb_size=100, n_comp=3, n_comp_mtx=4, logdir="./logdir")
         net, att_, _ = train_model(wv=wv,
                                    context_list=lines, n_comp=3, lr=1e-3, epoch_num=EPOCH_NUM,
                                    lr_decay=False, do_shuffle=False, lemmatize=False,
@@ -78,7 +86,7 @@ if __name__ == "__main__":
                                    logdir="./logdir", restore=False,
                                    save_path=os.path.join(SAVED_MODELS_PATH, "{}/{}".format(w, w)),
                                    save_model=SAVE_MODELS,
-                                   net=net)
+                                   net=None)
         att_train[w] = att_
         nets[w] = net
 
@@ -119,4 +127,12 @@ if __name__ == "__main__":
         plot_attentions(att_test, labels=labels_dict, labels_true=labels_true, save_to_path='./img/')
 
     if EVAL:
-        evaluate_weighted_ari(df_file_name=DATASET, predicted_labels=labels_lst)
+        score = evaluate_weighted_ari(df_file_name=DATASET, predicted_labels=labels_lst)
+
+    if SAVE_PREDICTIONS:
+        fname = "saved_wiki_{}.pickle".format(strftime("%Y-%m-%d_[%H-%M-%S]", gmtime()))
+        if score:
+            fname = str(score) + '_' + fname
+        with open(fname, 'wb') as f:
+            pickle.dump(labels_dict, f)
+        print("Predictions has been pickled!")

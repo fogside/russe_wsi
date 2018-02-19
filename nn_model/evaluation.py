@@ -51,3 +51,4 @@ def evaluate_weighted_ari(df_file_name: str, predicted_labels: List):
         print('{}\t{:.6f}\t{:d}'.format(word, *words[word]))
 
     print('\t{:.6f}\t{:d}'.format(ari, len(df)))
+    return ari
