@@ -13,10 +13,12 @@ def train_model(wv: KeyedVectors,
                 lemmatize=False, word_exclude="",
                 use_tfidf=False, sample_context=False,
                 num_context_samples=10,
+                use_postags=False,
                 logdir=None, restore=False,
                 save_model=False,
                 save_path="./saved_models",
-                net=None
+                net=None,
+                init_value=None,
                 ) -> (MultiComp, np.array, np.array):
     """
     :param wv: pretrained word2vec vectors are neesary for data generator
@@ -36,13 +38,16 @@ def train_model(wv: KeyedVectors,
     :param restore: if True then model will be restored from save_path
     :param save_model: if True model will be saved to 'save_path'
     :param save_path = "./saved_models"
+    :param init_value: np.array with shape [n_comp, emb_size] with init value
     :return: trained model, attention for all samples in train, list of losses
 
     """
     assert (save_path is not None) if save_model else True, 'save_path must be specified if save_model is True!'
 
     if net is None:
-        net = MultiComp(emb_size=emb_size, n_comp=n_comp, logdir=logdir, restore=restore, saved_model_path=save_path)
+        net = MultiComp(emb_size=emb_size, n_comp=n_comp,
+                        logdir=logdir, restore=restore,
+                        saved_model_path=save_path, init_value=init_value)
 
     n_samples = len(context_list)
     train_atts = list()
@@ -50,7 +55,7 @@ def train_model(wv: KeyedVectors,
     for epoch in range(epoch_num):
 
         batch_gen = generate_triplet_batch(wv=wv, context_list=context_list,
-                                           word_exclude=word_exclude,
+                                           word_exclude=word_exclude, use_postags=use_postags,
                                            lemmatize=lemmatize, use_tfidf=use_tfidf, do_shuffle=do_shuffle,
                                            sample_context=sample_context, num_context_samples=num_context_samples)
 

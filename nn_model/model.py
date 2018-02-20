@@ -4,7 +4,7 @@ import numpy as np
 
 class MultiComp:
     def __init__(self, emb_size: int, n_comp: int, logdir: str = None,
-                 saved_model_path: str = None, restore: bool = False) -> None:
+                 saved_model_path: str = None, restore: bool = False, init_value=None) -> None:
 
         assert (saved_model_path is not None) if restore else True, \
             "saved_model_path must be specified only if restore is True!"
@@ -17,8 +17,13 @@ class MultiComp:
 
         # comp_init = np.random.randn(n_comp, emb_size) / np.sqrt(emb_size * n_comp)
         # self.sense_comps = tf.Variable(comp_init, dtype=tf.float32, name='senses')
-        self.sense_comps = tf.get_variable(name='senses', shape=[n_comp, emb_size],
-                                           initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+        if init_value is None:
+            self.sense_comps = tf.get_variable(name='senses', shape=[n_comp, emb_size],
+                                               initializer=tf.initializers.orthogonal(), dtype=tf.float32)
+                                               # initializer=tf.initializers.random_normal(stddev=0.1), dtype=tf.float32)
+                                               # initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32)
+        else:
+            self.sense_comps = tf.Variable(init_value, dtype=tf.float32, name='senses')
 
         # Attention
         #         self.centroid = tf.get_variable("centroid", shape=[1, emb_size],
@@ -34,12 +39,21 @@ class MultiComp:
 
         norm_sens = tf.nn.l2_normalize(self.sense_comps, 1)  # n_comp x 100
 
-        att = tf.reduce_sum(mean_cont * norm_sens, axis=1, keep_dims=True, name='att')
+        # att = tf.reduce_sum(mean_cont * norm_sens, axis=1, keep_dims=True, name='att')
+        # #         noise = tf.random_normal(att.get_shape()) * tf.reduce_mean(att) / 3
+        # #         att += noise
+        # self.att = att
+        #         self.att = tf.nn.softmax(att, dim=0)
+
+        # Two att types:
+        att_mul = tf.reduce_sum(mean_cont * norm_sens, axis=1, keep_dims=True, name='att')
+        att_add = tf.layers.dense(tf.concat([tf.tile(mean_cont, (n_comp, 1)), norm_sens], 1), 1, activation=tf.tanh)
+        att = (att_mul + att_add) / 2
         #         noise = tf.random_normal(att.get_shape()) * tf.reduce_mean(att) / 3
         #         att += noise
-        self.att = att
-        #         self.att = tf.nn.softmax(att, dim=0)
-        word_emb = tf.reduce_sum(self.sense_comps * self.att, axis=0, keep_dims=True)
+        self.att = tf.concat([att_mul, att_add], axis=0)
+
+        word_emb = tf.reduce_sum(self.sense_comps * att, axis=0, keep_dims=True)
 
         # Cosine loss
         norm_pos = tf.nn.l2_normalize(self.pos, 1)
